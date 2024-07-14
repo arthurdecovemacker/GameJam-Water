@@ -45,7 +45,7 @@ class Player(pygame.sprite.Sprite):
         player_image_path = "player.png"
         if os.path.exists(player_image_path):
             self.surf = pygame.image.load(player_image_path).convert_alpha()
-            self.surf = pygame.transform.scale(self.surf, (150, 150))  # Resize the image to 50x50 pixels
+            self.surf = pygame.transform.scale(self.surf, (150, 150))  # Resize the image to 150x150 pixels
         else:
             self.surf = pygame.Surface((50, 50))
             self.surf.fill(red)
@@ -67,8 +67,13 @@ class Player(pygame.sprite.Sprite):
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self):
         super(Obstacle, self).__init__()
-        self.surf = pygame.Surface((obstacle_size, obstacle_size))
-        self.surf.fill(blue)
+        obstacle_image_path = "raindrop.webp"
+        if os.path.exists(obstacle_image_path):
+            self.surf = pygame.image.load(obstacle_image_path).convert_alpha()
+            self.surf = pygame.transform.scale(self.surf, (obstacle_size, obstacle_size))  # Resize the image to the obstacle size
+        else:
+            self.surf = pygame.Surface((obstacle_size, obstacle_size))
+            self.surf.fill(blue)
         self.rect = self.surf.get_rect(center=(random.randint(0, screen_width - obstacle_size), 0))
     
     def update(self):
@@ -87,7 +92,8 @@ def game():
     lives = 3  # Number of player lives
 
     ADD_OBSTACLE = pygame.USEREVENT + 1
-    pygame.time.set_timer(ADD_OBSTACLE, 250)
+    obstacle_add_time = 1000  # Initial time between obstacle spawns (milliseconds)
+    pygame.time.set_timer(ADD_OBSTACLE, obstacle_add_time)
 
     while not game_over and lives > 0:
         for event in pygame.event.get():
@@ -97,6 +103,10 @@ def game():
                 new_obstacle = Obstacle()
                 obstacles.add(new_obstacle)
                 all_sprites.add(new_obstacle)
+                # Decrease obstacle add time (increase frequency) over time
+                if obstacle_add_time > 200:
+                    obstacle_add_time -= 10
+                pygame.time.set_timer(ADD_OBSTACLE, obstacle_add_time)
 
         pressed_keys = pygame.key.get_pressed()
         player.update(pressed_keys)
