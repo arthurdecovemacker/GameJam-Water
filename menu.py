@@ -13,8 +13,7 @@ blue = (0, 0, 255)
 grey = (169, 169, 169)
 
 def draw_menu(screen, font, background_image):
-    screen.blit(background_image, (0, 0))  # Affichage de l'image de fond
-
+    screen.blit(background_image, (0, 0))
     title_text = font.render("Rain Game", True, black)
     screen.blit(title_text, (screen.get_width() / 2 - title_text.get_width() / 2, screen.get_height() / 2 - title_text.get_height() / 2 - 100))
 
