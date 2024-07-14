@@ -1,47 +1,56 @@
 import pygame
 import random
+import os
 from menu import draw_menu
 
-# Initialisation de Pygame
+# Initialize Pygame
 pygame.init()
 
-# Dimensions de la fenêtre du jeu
+# Window dimensions
 screen_width = 1300
 screen_height = 1300
 
-# Couleurs
+# Colors
 white = (255, 255, 255)
 red = (255, 0, 0)
-green = (0, 255, 0)
+blue = (0, 0, 255)
 black = (0, 0, 0)
 
-# Création de la fenêtre du jeu
+# Create the game window
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Rain Game")
 
-# Fontes
+# Fonts
 font = pygame.font.SysFont("monospace", 35)
 
-# Charger l'image de fond
-background_image = pygame.image.load("Background.jpg")  # Assurez-vous que le fichier background.jpg existe dans le même répertoire que votre script
-background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+# Check if the background image exists before loading
+background_image_path = "Background.jpg"
+if os.path.exists(background_image_path):
+    background_image = pygame.image.load(background_image_path)
+    background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+else:
+    background_image = pygame.Surface((screen_width, screen_height))
+    background_image.fill(black)
 
-# Taille et position des obstacles
+# Obstacle size and speed
 obstacle_size = 50
-
-# Vitesse des obstacles
 speed = 10
 
-# Définition des horloges pour le framerate
+# Clock for framerate
 clock = pygame.time.Clock()
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
-        self.surf = pygame.Surface((50, 50))
-        self.surf.fill(red)
-        self.rect = self.surf.get_rect(center=(screen_width / 2, screen_height - 100))
-        self.speed = 10
+        player_image_path = "player.png"
+        if os.path.exists(player_image_path):
+            self.surf = pygame.image.load(player_image_path).convert_alpha()
+            self.surf = pygame.transform.scale(self.surf, (150, 150))  # Resize the image to 50x50 pixels
+        else:
+            self.surf = pygame.Surface((50, 50))
+            self.surf.fill(red)
+        self.rect = self.surf.get_rect(center=(screen_width / 2, screen_height - 70))
+        self.speed = 5
     
     def update(self, pressed_keys):
         if pressed_keys[pygame.K_LEFT]:
@@ -59,7 +68,7 @@ class Obstacle(pygame.sprite.Sprite):
     def __init__(self):
         super(Obstacle, self).__init__()
         self.surf = pygame.Surface((obstacle_size, obstacle_size))
-        self.surf.fill(green)
+        self.surf.fill(blue)
         self.rect = self.surf.get_rect(center=(random.randint(0, screen_width - obstacle_size), 0))
     
     def update(self):
@@ -75,7 +84,7 @@ def game():
 
     game_over = False
     score = 0
-    lives = 3  # Nombre de vies du joueur
+    lives = 3  # Number of player lives
 
     ADD_OBSTACLE = pygame.USEREVENT + 1
     pygame.time.set_timer(ADD_OBSTACLE, 250)
@@ -93,18 +102,24 @@ def game():
         player.update(pressed_keys)
         obstacles.update()
 
+        # Check for collisions
         if pygame.sprite.spritecollideany(player, obstacles):
             lives -= 1
-            if lives == 0:
+            if lives > 0:
+                # Remove the colliding obstacle to avoid multiple collisions
+                for obstacle in obstacles:
+                    if pygame.sprite.collide_rect(player, obstacle):
+                        obstacle.kill()
+            else:
                 game_over = True
 
-        # Affichage de l'image de fond
+        # Display background image
         screen.blit(background_image, (0, 0))
 
         for entity in all_sprites:
             screen.blit(entity.surf, entity.rect)
 
-        # Affichage du score et des vies
+        # Display score and lives
         score_text = font.render("Score: {}".format(score), True, white)
         screen.blit(score_text, (10, 10))
         lives_text = font.render("Lives: {}".format(lives), True, white)
@@ -120,19 +135,19 @@ def game():
 def game_over_screen(score):
     screen.fill(black)
     
-    # Texte "Game Over!"
+    # "Game Over!" text
     game_over_text = font.render("Game Over!", True, red)
     game_over_rect = game_over_text.get_rect(center=(screen_width // 2, screen_height // 2 - 50))
     screen.blit(game_over_text, game_over_rect)
 
-    # Texte du score
+    # Score text
     score_text = font.render("Score: {}".format(score), True, red)
     score_rect = score_text.get_rect(center=(screen_width // 2, screen_height // 2 + 50))
     screen.blit(score_text, score_rect)
 
     pygame.display.update()
 
-# Boucle principale avec le menu
+# Main loop with menu
 running = True
 while running:
     play_button, exit_button = draw_menu(screen, font, background_image)
@@ -143,9 +158,9 @@ while running:
             mouse_pos = event.pos
             if play_button.collidepoint(mouse_pos):
                 score = game()
-                # Affichage de l'écran de fin
+                # Display game over screen
                 game_over_screen(score)
-                pygame.time.wait(2000)  # Pause de 2 secondes
+                pygame.time.wait(2000)  # 2-second pause
 
             if exit_button.collidepoint(mouse_pos):
                 running = False
