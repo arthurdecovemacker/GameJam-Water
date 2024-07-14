@@ -14,8 +14,6 @@ white = (255, 255, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 black = (0, 0, 0)
-blue = (0, 0, 255)
-grey = (169, 169, 169)
 
 # Création de la fenêtre du jeu
 screen = pygame.display.set_mode((screen_width, screen_height))
@@ -28,10 +26,6 @@ font = pygame.font.SysFont("monospace", 35)
 background_image = pygame.image.load("Background.jpg")  # Assurez-vous que le fichier background.jpg existe dans le même répertoire que votre script
 background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
 
-# Position initiale du joueur
-player_size = 50
-player_pos = [screen_width / 2, screen_height - 2 * player_size]
-
 # Taille et position des obstacles
 obstacle_size = 50
 
@@ -41,56 +35,74 @@ speed = 10
 # Définition des horloges pour le framerate
 clock = pygame.time.Clock()
 
-# Fonction pour détecter les collisions
-def detect_collision(player_pos, obstacle_pos):
-    p_x, p_y = player_pos
-    o_x, o_y = obstacle_pos
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Player, self).__init__()
+        self.surf = pygame.Surface((50, 50))
+        self.surf.fill(red)
+        self.rect = self.surf.get_rect(center=(screen_width / 2, screen_height - 100))
+        self.speed = 10
+    
+    def update(self, pressed_keys):
+        if pressed_keys[pygame.K_LEFT]:
+            self.rect.move_ip(-self.speed, 0)
+        if pressed_keys[pygame.K_RIGHT]:
+            self.rect.move_ip(self.speed, 0)
+        
+        # Keep player on the screen
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > screen_width:
+            self.rect.right = screen_width
 
-    if (o_x >= p_x and o_x < (p_x + player_size)) or (p_x >= o_x and p_x < (o_x + obstacle_size)):
-        if (o_y >= p_y and o_y < (p_y + player_size)) or (p_y >= o_y and p_y < (o_y + obstacle_size)):
-            return True
-    return False
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Obstacle, self).__init__()
+        self.surf = pygame.Surface((obstacle_size, obstacle_size))
+        self.surf.fill(green)
+        self.rect = self.surf.get_rect(center=(random.randint(0, screen_width - obstacle_size), 0))
+    
+    def update(self):
+        self.rect.move_ip(0, speed)
+        if self.rect.top > screen_height:
+            self.kill()
 
-# Fonction principale du jeu
 def game():
-    player_pos = [screen_width / 2, screen_height - 2 * player_size]
-    obstacle_pos = [random.randint(0, screen_width - obstacle_size), 0]
+    player = Player()
+    obstacles = pygame.sprite.Group()
+    all_sprites = pygame.sprite.Group()
+    all_sprites.add(player)
+
     game_over = False
     score = 0
-    lives = 1  # Nombre de vies du joueur
+    lives = 3  # Nombre de vies du joueur
+
+    ADD_OBSTACLE = pygame.USEREVENT + 1
+    pygame.time.set_timer(ADD_OBSTACLE, 250)
 
     while not game_over and lives > 0:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_over = True
+            elif event.type == ADD_OBSTACLE:
+                new_obstacle = Obstacle()
+                obstacles.add(new_obstacle)
+                all_sprites.add(new_obstacle)
 
-        keys = pygame.key.get_pressed()
-        
-        # Vitesse du joueur en fonction des vies restantes
-        player_speed = 11 - (3 - lives) * 2  # Vitesse réduite de 2 pour chaque vie perdue
-        
-        if keys[pygame.K_LEFT] and player_pos[0] > 0:
-            player_pos[0] -= player_speed
-        if keys[pygame.K_RIGHT] and player_pos[0] < screen_width - player_size:
-            player_pos[0] += player_speed
+        pressed_keys = pygame.key.get_pressed()
+        player.update(pressed_keys)
+        obstacles.update()
+
+        if pygame.sprite.spritecollideany(player, obstacles):
+            lives -= 1
+            if lives == 0:
+                game_over = True
 
         # Affichage de l'image de fond
         screen.blit(background_image, (0, 0))
 
-        if obstacle_pos[1] >= 0 and obstacle_pos[1] < screen_height:
-            obstacle_pos[1] += speed
-        else:
-            obstacle_pos = [random.randint(0, screen_width - obstacle_size), 0]
-            score += 1
-
-        if detect_collision(player_pos, obstacle_pos):
-            lives -= 1
-            obstacle_pos = [random.randint(0, screen_width - obstacle_size), 0]
-            if lives == 0:
-                game_over = True
-
-        pygame.draw.rect(screen, red, (player_pos[0], player_pos[1], player_size, player_size))
-        pygame.draw.rect(screen, green, (obstacle_pos[0], obstacle_pos[1], obstacle_size, obstacle_size))
+        for entity in all_sprites:
+            screen.blit(entity.surf, entity.rect)
 
         # Affichage du score et des vies
         score_text = font.render("Score: {}".format(score), True, white)
@@ -101,6 +113,7 @@ def game():
         pygame.display.update()
 
         clock.tick(30)
+        score += 1
 
     return score
 
@@ -118,7 +131,6 @@ def game_over_screen(score):
     screen.blit(score_text, score_rect)
 
     pygame.display.update()
-
 
 # Boucle principale avec le menu
 running = True
